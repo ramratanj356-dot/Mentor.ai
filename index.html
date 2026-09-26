@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#173b35">
+  <meta name="description" content="A small, private workspace for turning hard problems into clear next steps. No account or installation needed.">
+  <title>Your Planboard — Make progress on what matters</title>
+  <!-- One self-contained file: no packages, external fonts, trackers, or network requests. -->
+  <style>
+    :root {
+      --ink: #19362f;
+      --ink-dark: #112b26;
+      --muted: #6b7972;
+      --paper: #fffefa;
+      --canvas: #f7f7f2;
+      --line: #e4e9e2;
+      --green-light: #e4efe4;
+      --peach: #eeb28c;
+      --orange: #c37246;
+      --shadow: 0 9px 28px rgba(28, 52, 39, .045);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink-dark);
+      background: var(--canvas);
+      font-synthesis: none;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; min-width: 320px; }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .5; }
+    a { color: inherit; }
+    [hidden] { display: none !important; }
+    :focus-visible { outline: 3px solid #e9a26c; outline-offset: 3px; }
+    ::selection { background: #f7d6bb; color: var(--ink-dark); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    .skip-link { position: fixed; z-index: 20; left: 14px; top: -80px; padding: 12px 16px; border-radius: 9px; color: white; background: var(--ink-dark); }
+    .skip-link:focus { top: 12px; }
+
+    .app { display: grid; grid-template-columns: 256px minmax(0, 1fr); min-height: 100vh; }
+    .sidebar { background: #173b35; color: #f7f9f4; min-height: 100vh; padding: 30px 17px 24px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+    .brand { display: flex; gap: 11px; align-items: center; padding: 2px 12px; letter-spacing: -.045em; font-weight: 750; font-size: 18px; white-space: nowrap; }
+    .brand-mark { flex: 0 0 29px; width: 29px; height: 29px; display: grid; place-items: center; background: #e7b18d; color: #173b35; border-radius: 9px; }
+    .brand-mark svg { width: 19px; height: 19px; }
+    .side-subtitle { color: #b5c7bd; font-size: 12px; line-height: 1.55; margin: 19px 12px 32px; max-width: 180px; }
+    .side-heading { display: flex; justify-content: space-between; align-items: center; padding: 0 7px 11px 12px; color: #bdd1c7; text-transform: uppercase; letter-spacing: .13em; font-size: 10px; font-weight: 750; border-bottom: 1px solid rgba(255,255,255,.14); }
+    .new-icon { width: 25px; height: 25px; border: 0; border-radius: 6px; color: white; background: rgba(255,255,255,.11); display: grid; place-items: center; font-size: 20px; line-height: 1; }
+    .new-icon:hover { background: rgba(255,255,255,.24); }
+    .plan-nav { display: grid; gap: 5px; margin-top: 12px; }
+    .plan-link { border: 1px solid transparent; border-radius: 11px; width: 100%; display: flex; align-items: flex-start; gap: 9px; padding: 12px 10px; text-align: left; background: transparent; color: #c7d7cf; }
+    .plan-link:hover { background: rgba(255,255,255,.09); }
+    .plan-link.active { background: #f2f4ec; color: var(--ink-dark); }
+    .plan-dot { flex: 0 0 9px; width: 9px; height: 9px; margin-top: 5px; border: 2px solid #92b7a3; border-radius: 50%; }
+    .plan-link.active .plan-dot { border-color: var(--orange); background: var(--orange); }
+    .plan-link-main { min-width: 0; display: grid; gap: 4px; }
+    .plan-name { font-size: 12px; font-weight: 690; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .plan-meta { color: #9bb6a8; font-size: 11px; }
+    .plan-link.active .plan-meta { color: #698176; }
+    .side-empty { padding: 12px; color: #bad0c4; font-size: 12px; line-height: 1.5; }
+    .side-bottom { margin-top: auto; padding: 22px 11px 0; border-top: 1px solid rgba(255,255,255,.14); }
+    .side-bottom-label { display: flex; gap: 8px; align-items: center; font-size: 12px; font-weight: 650; }
+    .side-bottom-label svg { width: 15px; height: 15px; stroke: #ebb58e; }
+    .side-bottom p { font-size: 11px; color: #a9c2b6; line-height: 1.6; margin: 7px 0 0 23px; }
+
+    .main-column { min-width: 0; }
+    .topbar { min-height: 76px; border-bottom: 1px solid var(--line); background: rgba(255,254,250,.94); display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 12px clamp(24px, 4.4vw, 62px); }
+    .breadcrumbs { font-size: 12px; color: #849188; letter-spacing: .01em; }
+    .breadcrumbs strong { color: var(--ink); font-weight: 650; }
+    .top-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .save-status { color: #698475; font-size: 11px; font-weight: 620; margin-right: 9px; white-space: nowrap; }
+    .save-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; display: inline-block; vertical-align: 2px; margin-right: 7px; background: #58a47a; }
+    .save-status.warning { color: #a44b36; }
+    .save-status.warning::before { background: #a44b36; }
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 10px; padding: 10px 16px; font-weight: 670; font-size: 12px; border: 1px solid transparent; transition: transform .16s, background .16s, border-color .16s; text-decoration: none; }
+    .button:hover { transform: translateY(-1px); }
+    .button svg { width: 15px; height: 15px; }
+    .button-outline { background: transparent; border-color: #d9e2d9; color: #315247; }
+    .button-outline:hover { background: #f2f7f0; border-color: #a9c0ae; }
+    .button-primary { background: #173b35; color: #fff; }
+    .button-primary:hover { background: #28554b; }
+    .button-danger { background: #a94c3b; color: #fff; }
+    .button-danger:hover { background: #913927; }
+    .page { max-width: 1490px; padding: 35px clamp(24px, 4.4vw, 62px) 34px; margin: 0 auto; }
+
+    .hero { min-height: 283px; padding: 38px clamp(30px, 4vw, 55px); border-radius: 21px; background: #e4efe4; display: flex; align-items: center; position: relative; overflow: hidden; isolation: isolate; }
+    .hero::before, .hero::after { content: ""; position: absolute; border: 1px solid rgba(34,75,60,.14); border-radius: 50%; pointer-events: none; z-index: -1; }
+    .hero::before { width: 535px; height: 535px; right: -193px; top: -176px; }
+    .hero::after { width: 345px; height: 345px; right: -96px; top: -79px; }
+    .hero-copy { width: min(625px, 66%); position: relative; z-index: 1; }
+    .eyebrow { font-weight: 760; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
+    .hero .eyebrow { display: flex; align-items: center; gap: 8px; color: #3f7159; }
+    .spark { background: #c57749; width: 6px; height: 6px; border-radius: 50%; }
+    .hero h1 { font-size: clamp(33px, 3.8vw, 53px); letter-spacing: -.06em; line-height: 1.06; font-weight: 790; margin: 17px 0 14px; max-width: 650px; }
+    .hero h1 em { font-style: normal; color: #679573; }
+    .hero p { color: #557166; line-height: 1.65; font-size: 13px; max-width: 475px; margin: 0 0 23px; }
+    .hero-card { position: absolute; width: 220px; height: 203px; right: 8.7%; top: 46px; transform: rotate(8deg); background: #1b413a; border-radius: 14px; color: #fffefa; padding: 19px 21px; box-shadow: 0 21px 44px rgba(28,67,45,.20); }
+    .hero-card-top { color: #e8ad85; text-transform: uppercase; letter-spacing: .16em; font-size: 9px; font-weight: 770; display: flex; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,.18); }
+    .hero-card-line { display: flex; gap: 12px; align-items: center; margin-top: 14px; font-size: 12px; font-weight: 640; }
+    .hero-card-line span:first-child { color: #e8ad85; font-size: 10px; font-weight: 800; }
+    .hero-card-line:nth-child(4) { color: #abc8b8; }
+    .hero-card-corner { position: absolute; width: 11px; height: 11px; background: #ebb389; border-radius: 50%; bottom: 18px; right: 20px; }
+
+    .workspace-heading { display: flex; gap: 15px; justify-content: space-between; align-items: end; margin: 36px 0 17px; }
+    .section-kicker { font-size: 10px; color: #a47050; letter-spacing: .15em; text-transform: uppercase; font-weight: 790; }
+    .workspace-heading h2 { font-size: 24px; letter-spacing: -.04em; margin: 6px 0 3px; overflow-wrap: anywhere; }
+    .workspace-heading p { color: var(--muted); margin: 0; font-size: 12px; }
+    .workspace-tools { display: flex; align-items: center; gap: 12px; padding-bottom: 3px; flex-shrink: 0; }
+    .sample-badge { padding: 6px 9px; border-radius: 100px; background: #fcf0e6; color: #a6623e; text-transform: uppercase; font-size: 9px; letter-spacing: .08em; font-weight: 800; white-space: nowrap; }
+    .text-danger { border: 0; background: none; color: #ac5d4d; padding: 6px; font-size: 11px; font-weight: 690; }
+    .text-danger:hover { text-decoration: underline; }
+    .board-grid { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 18px; align-items: start; }
+    .editor-left, .editor-right { display: grid; gap: 18px; min-width: 0; }
+    .card { border: 1px solid var(--line); border-radius: 17px; background: var(--paper); box-shadow: var(--shadow); padding: clamp(22px, 2.8vw, 31px); }
+    .card-head { display: flex; align-items: flex-start; gap: 13px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+    .step-number { width: 36px; height: 36px; border-radius: 10px; background: #f9e9da; color: #ba704a; flex: 0 0 36px; display: grid; place-items: center; font-size: 11px; font-weight: 800; }
+    .card-head h3 { margin: 0 0 3px; font-size: 17px; letter-spacing: -.035em; }
+    .card-head p { color: var(--muted); font-size: 11px; margin: 0; line-height: 1.5; }
+    .details-form { display: grid; gap: 8px; margin-top: 20px; }
+    .details-form label, .task-form label:not(.sr-only) { color: #344b3f; font-weight: 695; font-size: 11px; }
+    .details-form label small { font-size: 10px; font-weight: 450; color: #84948a; }
+    .field { width: 100%; background: #fdfdfa; border: 1px solid #dce5dc; border-radius: 9px; padding: 11px 13px; color: #1b3830; font-size: 12px; outline: 0; transition: border .18s, box-shadow .18s; }
+    .field::placeholder { color: #9baaa0; }
+    .field:focus { border-color: #8aa994; box-shadow: 0 0 0 3px #dfece1; }
+    textarea.field { resize: vertical; min-height: 82px; line-height: 1.5; }
+    .field-gap { margin-top: 11px; }
+    .fields-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
+    .fields-row > div { display: grid; gap: 8px; min-width: 0; }
+    .autosave-note { color: #8b978d; display: flex; align-items: center; gap: 7px; margin-top: 12px; font-size: 10px; line-height: 1.5; }
+    .autosave-note svg { width: 14px; height: 14px; flex: none; stroke: #719c7d; }
+    .task-form { margin-top: 19px; background: #f7faf6; border: 1px solid #e6ece4; padding: 12px; border-radius: 12px; }
+    .task-form input.field { background: #fff; }
+    .task-form-bottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 10px; }
+    .task-form-bottom select { border: 0; background: transparent; color: #52675b; padding: 8px 4px; font-size: 11px; cursor: pointer; }
+    .task-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin: 25px 0 13px; }
+    .task-top h4 { font-size: 12px; margin: 0; }
+    .task-top h4 span { color: #93a298; font-weight: 520; margin-left: 3px; }
+    .filters { display: flex; gap: 3px; background: #f4f6f2; border-radius: 7px; padding: 3px; }
+    .filter-button { border: 0; padding: 6px 10px; color: #788a7e; background: transparent; border-radius: 5px; font-size: 10px; font-weight: 700; }
+    .filter-button.active { background: white; color: #29503b; box-shadow: 0 1px 5px rgba(30,54,38,.09); }
+    .task-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+    .task-row { display: flex; align-items: center; gap: 11px; border: 1px solid var(--line); border-radius: 10px; background: white; padding: 12px 11px; min-width: 0; }
+    .task-row:hover { border-color: #bfd2c2; }
+    .task-check { appearance: none; width: 18px; height: 18px; border: 1.5px solid #b6c9b9; border-radius: 5px; flex: 0 0 18px; margin: 0; cursor: pointer; background: white; display: grid; place-items: center; }
+    .task-check:checked { background: #457f61; border-color: #457f61; }
+    .task-check:checked::after { content: ""; width: 8px; height: 4px; border-left: 2px solid white; border-bottom: 2px solid white; transform: rotate(-45deg) translateY(-1px); }
+    .task-text { font-size: 11px; line-height: 1.45; font-weight: 590; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .task-row.done .task-text { text-decoration: line-through; color: #95a397; font-weight: 450; }
+    .priority { font-size: 9px; font-weight: 780; padding: 5px 7px; border-radius: 5px; white-space: nowrap; }
+    .priority-high { background: #fbede5; color: #a96342; }
+    .priority-normal { background: #edf2fa; color: #5d789d; }
+    .priority-low { background: #eef5e9; color: #6b8763; }
+    .remove-task { border: 0; background: transparent; color: #9ead9f; border-radius: 6px; padding: 5px; height: 26px; width: 26px; display: grid; place-items: center; flex: 0 0 26px; }
+    .remove-task:hover { background: #fbece9; color: #ac5d4d; }
+    .remove-task svg { width: 14px; height: 14px; }
+    .tasks-empty { color: #839287; font-size: 11px; line-height: 1.6; text-align: center; padding: 22px 10px; border: 1px dashed #dae5da; border-radius: 10px; margin: 0; }
+    .progress-card { border-radius: 17px; background: #1b4038; color: #fff; padding: 27px; position: relative; overflow: hidden; }
+    .progress-card::before { content: ""; width: 180px; height: 180px; position: absolute; top: -100px; right: -80px; border: 1px solid rgba(255,255,255,.14); border-radius: 50%; }
+    .progress-card .eyebrow { color: #e7b58c; }
+    .progress-ring { --progress: 0%; width: 128px; height: 128px; border-radius: 50%; background: conic-gradient(#eab087 var(--progress), rgba(255,255,255,.16) var(--progress)); display: grid; place-items: center; margin: 26px auto 23px; position: relative; }
+    .progress-ring::before { content: ""; position: absolute; inset: 12px; background: #1b4038; border-radius: 50%; }
+    .progress-ring span { position: relative; font-size: 28px; letter-spacing: -.06em; font-weight: 770; }
+    .progress-card h3 { font-size: 17px; letter-spacing: -.035em; margin: 0 0 7px; }
+    .progress-card p { color: #bfd2c5; font-size: 11px; line-height: 1.6; margin: 0 0 19px; }
+    .progress-row { display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,.16); padding-top: 15px; font-size: 11px; color: #cbdcd1; }
+    .progress-row strong { color: #fff; }
+    .tip-card { border-radius: 17px; background: #fff0e4; padding: 24px; }
+    .tip-card .eyebrow { color: #b37854; font-size: 9px; }
+    .tip-card h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 21px; line-height: 1.2; letter-spacing: -.025em; margin: 13px 0 8px; font-weight: 500; }
+    .tip-card p { color: #826e5d; line-height: 1.55; margin: 0; font-size: 11px; }
+    .ownership-card { border: 1px solid var(--line); border-radius: 17px; background: white; padding: 23px; }
+    .ownership-card svg { width: 20px; height: 20px; stroke: #56836b; }
+    .ownership-card h3 { margin: 10px 0 7px; font-size: 13px; }
+    .ownership-card p { font-size: 11px; color: var(--muted); line-height: 1.6; margin: 0; }
+    .empty-card { background: white; border: 1px dashed #cad9cb; border-radius: 17px; text-align: center; padding: 59px 20px; }
+    .empty-icon { margin: auto; width: 52px; height: 52px; background: #e7f1e7; border-radius: 14px; display: grid; place-items: center; color: #487b60; font-size: 28px; }
+    .empty-card h3 { font-size: 19px; letter-spacing: -.03em; margin: 17px 0 6px; }
+    .empty-card p { margin: 0 auto 18px; color: var(--muted); font-size: 12px; max-width: 340px; line-height: 1.6; }
+    .how-section { padding: 32px 0 18px; margin-top: 37px; border-top: 1px solid var(--line); }
+    .how-section > h2 { font-size: 20px; letter-spacing: -.035em; margin: 6px 0 21px; }
+    .how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 17px; }
+    .how-grid article { background: #fffefa; border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+    .how-grid article > span { color: #bc805d; font-size: 11px; font-weight: 800; }
+    .how-grid h3 { font-size: 13px; margin: 10px 0 6px; }
+    .how-grid p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 11px; }
+    .footer { color: #97a398; font-size: 10px; padding-top: 28px; }
+    .toast { position: fixed; z-index: 11; right: 22px; bottom: 22px; max-width: min(340px, calc(100vw - 44px)); color: white; background: #1e4038; padding: 12px 16px; border-radius: 10px; box-shadow: 0 9px 28px rgba(12,40,24,.24); font-size: 12px; line-height: 1.5; }
+    .confirm-dialog { width: min(390px, calc(100vw - 30px)); border: 1px solid var(--line); background: white; border-radius: 16px; padding: 25px; box-shadow: 0 20px 70px rgba(17,43,38,.27); color: var(--ink-dark); }
+    .confirm-dialog::backdrop { background: rgba(11,30,24,.55); }
+    .confirm-dialog h2 { font-size: 19px; margin: 0 0 8px; }
+    .confirm-dialog p { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 0 0 23px; }
+    .dialog-actions { display: flex; justify-content: end; gap: 9px; }
+    @media (max-width: 1120px) { .board-grid { grid-template-columns: minmax(0,1fr) 246px; } .hero-card { right: 5%; } }
+    @media (max-width: 930px) {
+      .app { display: block; }
+      .sidebar { height: auto; min-height: 0; position: static; padding: 17px 23px 13px; }
+      .brand { padding: 0; }
+      .side-subtitle, .side-bottom { display: none; }
+      .side-heading { margin-top: 15px; padding-left: 0; }
+      .plan-nav { display: flex; overflow-x: auto; padding-bottom: 2px; }
+      .plan-link { min-width: 165px; max-width: 220px; }
+      .topbar { min-height: 65px; }
+    }
+    @media (max-width: 730px) {
+      .page { padding: 22px 19px 28px; }
+      .topbar { padding: 12px 19px; }
+      .save-status { display: none; }
+      .hero { min-height: 0; padding: 32px 28px; }
+      .hero-copy { width: 100%; }
+      .hero-card { display: none; }
+      .board-grid { grid-template-columns: 1fr; }
+      .editor-right { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .progress-card { grid-row: span 2; }
+      .how-grid { grid-template-columns: 1fr; gap: 10px; }
+      .workspace-heading { margin-top: 28px; }
+    }
+    @media (max-width: 520px) {
+      .breadcrumbs { display: none; }
+      .topbar { justify-content: flex-end; }
+      .hero h1 { font-size: 35px; }
+      .workspace-heading { align-items: start; flex-wrap: wrap; }
+      .workspace-tools { width: 100%; justify-content: space-between; }
+      .fields-row, .editor-right { grid-template-columns: 1fr; }
+      .progress-card { grid-row: auto; }
+      .card { padding: 20px; }
+      .task-form-bottom .button { padding: 10px 12px; }
+      .task-row { gap: 7px; }
+      .priority { padding: 4px 5px; }
+      .remove-task { width: 22px; flex-basis: 22px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to workspace</a>
+  <div class="app">
+    <aside class="sidebar" aria-label="Your plans">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m5 12 4.2 4.2L19 6.5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>your planboard<span class="sr-only"> home</span></div>
+      <p class="side-subtitle">A little structure for big things. Make space for your next step.</p>
+      <div class="side-heading"><span>My plans</span><button id="sidebarNewBtn" class="new-icon" type="button" aria-label="Create a new plan" title="Create a new plan">+</button></div>
+      <nav class="plan-nav" id="planList" aria-label="Select a plan"></nav>
+      <div class="side-bottom">
+        <div class="side-bottom-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Only in this browser</div>
+        <p>Your plans aren't sent anywhere. Export a backup to keep a copy.</p>
+      </div>
+    </aside>
+
+    <div class="main-column" id="main">
+      <header class="topbar">
+        <div class="breadcrumbs">YOUR SPACE <span aria-hidden="true">/</span> <strong>Plan workspace</strong></div>
+        <div class="top-actions">
+          <span class="save-status" id="saveStatus">Saved in this browser</span>
+          <button class="button button-outline" id="exportBtn" type="button" title="Download a copy of your plans">Export</button>
+          <button class="button button-outline" id="importBtn" type="button" title="Add plans from a backup">Import</button>
+          <input id="importFile" class="sr-only" type="file" accept=".json,application/json" aria-label="Choose a plan backup to import">
+        </div>
+      </header>
+
+      <main class="page">
+        <section class="hero" aria-labelledby="heroTitle">
+          <div class="hero-copy">
+            <div class="eyebrow"><span class="spark" aria-hidden="true"></span> One step at a time</div>
+            <h1 id="heroTitle">Hard problems,<br><em>clear next steps.</em></h1>
+            <p>Turn a big idea into a plan you can actually move forward. Define the challenge, break it down, and keep going.</p>
+            <button class="button button-primary" id="heroNewBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Create a new plan</button>
+          </div>
+          <div class="hero-card" aria-hidden="true">
+            <div class="hero-card-top"><span>Your process</span><span>↗</span></div>
+            <div class="hero-card-line"><span>01</span><span>Define the challenge</span></div>
+            <div class="hero-card-line"><span>02</span><span>Find the small steps</span></div>
+            <div class="hero-card-line"><span>03</span><span>Make progress</span></div>
+            <div class="hero-card-corner"></div>
+          </div>
+        </section>
+
+        <div class="workspace-heading">
+          <div>
+            <div class="section-kicker">The workspace</div>
+            <h2 id="workspaceTitle" tabindex="-1">Your current plan</h2>
+            <p id="workspaceHint">Start with the example below, or make a plan of your own.</p>
+          </div>
+          <div class="workspace-tools">
+            <span class="sample-badge" id="sampleBadge">Editable example</span>
+            <button class="text-danger" id="deletePlanBtn" type="button">Delete this plan</button>
+          </div>
+        </div>
+
+        <section class="empty-card" id="emptyState" hidden aria-label="No plans yet">
+          <div class="empty-icon" aria-hidden="true">✳</div>
+          <h3>A fresh page. A fresh start.</h3>
+          <p>Create a plan, name your challenge, and add one action you can take today.</p>
+          <button class="button button-primary" id="emptyNewBtn" type="button">Create my first plan</button>
+        </section>
+
+        <div id="editor" class="board-grid">
+          <div class="editor-left">
+            <section class="card" aria-labelledby="detailsHeading">
+              <div class="card-head"><span class="step-number" aria-hidden="true">01</span><div><h3 id="detailsHeading">Give it a name</h3><p>Clear words make it easier to know where you're headed.</p></div></div>
+              <form class="details-form" id="planForm" autocomplete="off">
+                <label for="planTitle">What are you working on?</label>
+                <input class="field" type="text" id="planTitle" maxlength="100" placeholder="e.g. Help my neighborhood recycle more">
+                <label class="field-gap" for="planGoal">What would success look like?</label>
+                <textarea class="field" id="planGoal" maxlength="2000" placeholder="Describe a realistic result you would be proud of..."></textarea>
+                <div class="fields-row">
+                  <div><label for="planDue">Date to aim for <small>(optional)</small></label><input class="field" type="date" id="planDue"></div>
+                  <div><label for="planCategory">Category</label><select class="field" id="planCategory"><option>Personal</option><option>Work</option><option>Learning</option><option>Community</option><option>Other</option></select></div>
+                </div>
+                <div class="autosave-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.2 4.2L19 6.5"/></svg>Changes save automatically to this browser.</div>
+              </form>
+            </section>
+
+            <section class="card" aria-labelledby="stepsHeading">
+              <div class="card-head"><span class="step-number" aria-hidden="true">02</span><div><h3 id="stepsHeading">Break it down</h3><p>What's one small action you can take next?</p></div></div>
+              <form class="task-form" id="taskForm">
+                <label class="sr-only" for="taskInput">Describe a new step</label>
+                <input class="field" id="taskInput" type="text" maxlength="180" required placeholder="e.g. Ask three people what they need">
+                <div class="task-form-bottom"><select id="taskPriority" aria-label="Priority for this step"><option>Normal</option><option>High</option><option>Low</option></select><button class="button button-primary" type="submit">Add step <span aria-hidden="true">→</span></button></div>
+              </form>
+              <div class="task-top"><h4>Action list <span id="taskCount">0 steps</span></h4><div class="filters" role="group" aria-label="Filter steps"><button type="button" class="filter-button active" data-filter="all" aria-pressed="true">All</button><button type="button" class="filter-button" data-filter="open" aria-pressed="false">Open</button><button type="button" class="filter-button" data-filter="done" aria-pressed="false">Done</button></div></div>
+              <ul class="task-list" id="taskList"></ul>
+              <p class="tasks-empty" id="noTasks">No steps yet. Start with something small.</p>
+            </section>
+          </div>
+
+          <div class="editor-right">
+            <section class="progress-card" aria-labelledby="progressTitle">
+              <div class="eyebrow">The big picture</div>
+              <div class="progress-ring" id="progressRing" role="img" aria-label="0 percent complete"><span id="progressPct">0%</span></div>
+              <h3 id="progressTitle">You're making progress.</h3>
+              <p id="progressCopy">Add your first step to get started.</p>
+              <div class="progress-row"><span>Steps finished</span><strong id="progressCount">0 / 0</strong></div>
+            </section>
+            <section class="tip-card" aria-label="Planning tip"><div class="eyebrow">Field note / 01</div><h3>Small steps beat perfect plans.</h3><p>If a step still feels overwhelming, make it smaller. A good next step is one you can actually begin.</p></section>
+            <section class="ownership-card" id="ownership" aria-labelledby="ownershipTitle">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <h3 id="ownershipTitle">Your work stays yours.</h3>
+              <p>Plans stay in this browser. Download a backup with Export; use Import to add it on another device. No account, no tracking, no cloud sync.</p>
+            </section>
+          </div>
+        </div>
+
+        <section class="how-section" id="how-it-works" aria-labelledby="howTitle">
+          <div class="section-kicker">A simple method</div><h2 id="howTitle">Progress starts with a little clarity.</h2>
+          <div class="how-grid">
+            <article><span>01 / DEFINE</span><h3>Name the real challenge</h3><p>Write down what you're trying to change and what a good outcome looks like.</p></article>
+            <article><span>02 / DIVIDE</span><h3>Make it manageable</h3><p>List concrete actions. Pick the one you can do without waiting for a perfect plan.</p></article>
+            <article><span>03 / DO</span><h3>Keep the momentum</h3><p>Check things off as you go. Your plan can always change when you learn more.</p></article>
+          </div>
+        </section>
+        <footer class="footer">Your Planboard · An editable starter website with no external dependencies. Keep a backup of your plans.</footer>
+      </main>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="deleteDialog" class="confirm-dialog" aria-labelledby="dialogTitle" aria-describedby="dialogText">
+    <h2 id="dialogTitle">Delete this plan?</h2>
+    <p id="dialogText">This will remove the plan and all its steps from this browser. Export a backup first if you might need it later.</p>
+    <div class="dialog-actions"><button id="cancelDeleteBtn" class="button button-outline" type="button">Keep plan</button><button id="confirmDeleteBtn" class="button button-danger" type="button">Delete plan</button></div>
+  </dialog>
+  <noscript><p style="padding:20px;background:#fff0e4;color:#173b35">Please enable JavaScript to use the plan editor. The page does not contact any server.</p></noscript>
+
+  <script>
+  (() => {
+    'use strict';
+    const KEY = 'your-planboard.v1';
+    const MAX_PLANS = 30;
+    const MAX_STEPS = 100;
+    const CATEGORIES = ['Personal', 'Work', 'Learning', 'Community', 'Other'];
+    const PRIORITIES = ['Normal', 'High', 'Low'];
+    const el = (id) => document.getElementById(id);
+    const ui = {
+      planList: el('planList'), saveStatus: el('saveStatus'), title: el('planTitle'),
+      goal: el('planGoal'), due: el('planDue'), category: el('planCategory'),
+      taskInput: el('taskInput'), taskPriority: el('taskPriority'), taskList: el('taskList'),
+      taskCount: el('taskCount'), noTasks: el('noTasks'), editor: el('editor'),
+      empty: el('emptyState'), heading: el('workspaceTitle'), hint: el('workspaceHint'),
+      sampleBadge: el('sampleBadge'), deletePlan: el('deletePlanBtn'),
+      progressRing: el('progressRing'), progressPct: el('progressPct'),
+      progressCopy: el('progressCopy'), progressCount: el('progressCount'),
+      importFile: el('importFile'), toast: el('toast'), dialog: el('deleteDialog')
+    };
+    let storageWorks = true;
+    let toastTimer;
+    let filter = 'all';
+
+    function uid() {
+      if (globalThis.crypto && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+      return Date.now().toString(36) + Math.random().toString(36).slice(2);
+    }
+    function example() {
+      return { version: 1, activeId: 'sample-plan', plans: [{
+        id: 'sample-plan', isSample: true, title: 'Build a helpful website', category: 'Learning', due: '',
+        goal: 'Create a simple site that solves one real problem and publish it so people can use it.',
+        tasks: [
+          { id: 'sample-1', text: 'Decide who the website is for', priority: 'High', done: true },
+          { id: 'sample-2', text: 'Write down the three most important features', priority: 'High', done: false },
+          { id: 'sample-3', text: 'Make a first working page', priority: 'Normal', done: false },
+          { id: 'sample-4', text: 'Ask one person to try it', priority: 'Low', done: false }
+        ]
+      }] };
+    }
+    function cleanPlan(p) {
+      if (!p || typeof p !== 'object' || !Array.isArray(p.tasks)) throw Error('This backup contains a damaged plan.');
+      if (p.tasks.length > MAX_STEPS) throw Error('A plan in the backup has more than 100 steps.');
+      return {
+        id: typeof p.id === 'string' ? p.id : uid(),
+        title: typeof p.title === 'string' ? p.title.slice(0, 100) : '',
+        goal: typeof p.goal === 'string' ? p.goal.slice(0, 2000) : '',
+        due: typeof p.due === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(p.due) ? p.due : '',
+        category: CATEGORIES.includes(p.category) ? p.category : 'Personal',
+        isSample: p.isSample === true,
+        tasks: p.tasks.map((t) => {
+          if (!t || typeof t.text !== 'string' || !t.text.trim()) throw Error('This backup contains a damaged step.');
+          return {
+            id: typeof t.id === 'string' ? t.id : uid(),
+            text: t.text.trim().slice(0, 180),
+            priority: PRIORITIES.includes(t.priority) ? t.priority : 'Normal',
+            done: t.done === true
+          };
+        })
+      };
+    }
+    function load() {
+      try {
+        const saved = localStorage.getItem(KEY);
+        if (!saved) return example();
+        const parsed = JSON.parse(saved);
+        if (parsed.version !== 1 || !Array.isArray(parsed.plans) || parsed.plans.length > MAX_PLANS) throw Error('Unrecognized saved plans.');
+        const plans = parsed.plans.map(cleanPlan);
+        return { version: 1, plans, activeId: plans.some((p) => p.id === parsed.activeId) ? parsed.activeId : (plans[0]?.id || null) };
+      } catch (error) {
+        storageWorks = false;
+        return example();
+      }
+    }
+    let state = load();
+    function selected() { return state.plans.find((p) => p.id === state.activeId) || null; }
+    function save() {
+      if (!storageWorks) { setSaveStatus(false); return; }
+      try {
+        localStorage.setItem(KEY, JSON.stringify(state));
+        setSaveStatus(true);
+      } catch (error) {
+        storageWorks = false;
+        setSaveStatus(false);
+        notify('Browser storage is unavailable. Export a backup to keep your work.');
+      }
+    }
+    function setSaveStatus(ok) {
+      ui.saveStatus.textContent = ok ? 'Saved in this browser' : 'Not saved · export a backup';
+      ui.saveStatus.classList.toggle('warning', !ok);
+    }
+    function notify(message) {
+      clearTimeout(toastTimer);
+      ui.toast.textContent = message;
+      ui.toast.hidden = false;
+      toastTimer = setTimeout(() => { ui.toast.hidden = true; }, 4400);
+    }
+    function make(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+    function renderSidebar() {
+      ui.planList.replaceChildren();
+      if (!state.plans.length) {
+        ui.planList.append(make('p', 'side-empty', 'No plans yet. Make your first one.'));
+        return;
+      }
+      for (const plan of state.plans) {
+        const button = make('button', 'plan-link' + (plan.id === state.activeId ? ' active' : ''));
+        button.type = 'button';
+        button.dataset.planId = plan.id;
+        if (plan.id === state.activeId) button.setAttribute('aria-current', 'page');
+        button.append(make('span', 'plan-dot'));
+        const body = make('span', 'plan-link-main');
+        body.append(make('span', 'plan-name', plan.title.trim() || 'Untitled plan'));
+        const completed = plan.tasks.filter((task) => task.done).length;
+        body.append(make('span', 'plan-meta', plan.tasks.length ? `${completed} of ${plan.tasks.length} steps done` : 'No steps yet'));
+        button.append(body);
+        ui.planList.append(button);
+      }
+    }
+    function renderTasks(plan) {
+      const total = plan.tasks.length;
+      const completed = plan.tasks.filter((task) => task.done).length;
+      ui.taskCount.textContent = `${total} ${total === 1 ? 'step' : 'steps'}`;
+      ui.progressCount.textContent = `${completed} / ${total}`;
+      const percent = total ? Math.round(100 * completed / total) : 0;
+      ui.progressPct.textContent = `${percent}%`;
+      ui.progressRing.style.setProperty('--progress', `${percent}%`);
+      ui.progressRing.setAttribute('aria-label', `${percent} percent complete`);
+      ui.progressCopy.textContent = total === 0 ? 'Add your first step to get started.' :
+        completed === total ? 'All steps complete. Take a moment to celebrate!' :
+        completed === 0 ? 'Every finished step starts with one small action.' :
+        `${total - completed} ${total - completed === 1 ? 'step' : 'steps'} to go. Keep the momentum.`;
+      document.querySelectorAll('[data-filter]').forEach((button) => {
+        const active = button.dataset.filter === filter;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+      ui.taskList.replaceChildren();
+      const visible = plan.tasks.filter((task) => filter === 'all' || (filter === 'done' ? task.done : !task.done));
+      ui.noTasks.hidden = visible.length !== 0;
+      ui.noTasks.textContent = total === 0 ? 'No steps yet. Start with something small.' :
+        filter === 'open' ? 'No open steps. Nice work!' :
+        filter === 'done' ? 'No finished steps yet. You’ve got this.' : 'No steps yet.';
+      for (const task of visible) {
+        const row = make('li', 'task-row' + (task.done ? ' done' : ''));
+        const checkbox = make('input', 'task-check');
+        checkbox.type = 'checkbox';
+        checkbox.checked = task.done;
+        checkbox.dataset.taskId = task.id;
+        checkbox.setAttribute('aria-label', `${task.done ? 'Mark as not done:' : 'Mark as done:'} ${task.text}`);
+        const text = make('span', 'task-text', task.text);
+        const badge = make('span', `priority priority-${task.priority.toLowerCase()}`, task.priority);
+        const remove = make('button', 'remove-task');
+        remove.type = 'button';
+        remove.dataset.removeId = task.id;
+        remove.setAttribute('aria-label', `Remove step: ${task.text}`);
+        remove.title = 'Remove step';
+        // This icon is a fixed SVG. User-entered content is inserted with textContent, never as HTML.
+        remove.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13M10 11v5m4-5v5"/></svg>';
+        row.append(checkbox, text, badge, remove);
+        ui.taskList.append(row);
+      }
+    }
+    function render() {
+      const plan = selected();
+      renderSidebar();
+      ui.editor.hidden = !plan;
+      ui.empty.hidden = !!plan;
+      ui.deletePlan.hidden = !plan;
+      ui.sampleBadge.hidden = !plan?.isSample;
+      ui.heading.textContent = plan ? (plan.title.trim() || 'Untitled plan') : 'No plan selected';
+      ui.hint.textContent = !plan ? 'Begin by making a plan of your own.' :
+        plan.isSample ? 'This is an editable example. Change it or create your own plan.' :
+        'Make it yours. Changes save automatically in this browser.';
+      if (!plan) return;
+      ui.title.value = plan.title;
+      ui.goal.value = plan.goal;
+      ui.due.value = plan.due;
+      ui.category.value = plan.category;
+      renderTasks(plan);
+    }
+    function newPlan() {
+      if (state.plans.length >= MAX_PLANS) { notify('This starter can hold up to 30 plans. Export and remove an old one first.'); return; }
+      const plan = { id: uid(), title: '', goal: '', due: '', category: 'Personal', isSample: false, tasks: [] };
+      state.plans.unshift(plan);
+      state.activeId = plan.id;
+      filter = 'all';
+      save(); render();
+      ui.title.focus();
+      ui.title.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      notify('New plan created. Give it a name to begin.');
+    }
+    ['sidebarNewBtn', 'heroNewBtn', 'emptyNewBtn'].forEach((id) => el(id).addEventListener('click', newPlan));
+    ui.planList.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-plan-id]');
+      if (!button) return;
+      state.activeId = button.dataset.planId;
+      filter = 'all';
+      save(); render();
+      ui.heading.focus();
+    });
+    function markPersonal(plan) {
+      plan.isSample = false;
+      ui.sampleBadge.hidden = true;
+      ui.hint.textContent = 'Make it yours. Changes save automatically in this browser.';
+    }
+    function updateDetail(key, value) {
+      const plan = selected();
+      if (!plan) return;
+      plan[key] = value;
+      markPersonal(plan);
+      ui.heading.textContent = plan.title.trim() || 'Untitled plan';
+      save(); renderSidebar();
+    }
+    ui.title.addEventListener('input', () => updateDetail('title', ui.title.value));
+    ui.goal.addEventListener('input', () => updateDetail('goal', ui.goal.value));
+    ui.due.addEventListener('change', () => updateDetail('due', ui.due.value));
+    ui.category.addEventListener('change', () => updateDetail('category', ui.category.value));
+    el('planForm').addEventListener('submit', (event) => event.preventDefault());
+    el('taskForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const plan = selected();
+      const text = ui.taskInput.value.trim();
+      if (!plan || !text) return;
+      if (plan.tasks.length >= MAX_STEPS) { notify('This starter supports up to 100 steps in each plan.'); return; }
+      plan.tasks.push({ id: uid(), text: text.slice(0, 180), priority: ui.taskPriority.value, done: false });
+      markPersonal(plan);
+      ui.taskInput.value = '';
+      filter = 'all';
+      save(); renderSidebar(); renderTasks(plan);
+      ui.taskInput.focus();
+      notify('Step added to your plan.');
+    });
+    ui.taskList.addEventListener('change', (event) => {
+      const checkbox = event.target.closest('[data-task-id]');
+      const plan = selected();
+      if (!checkbox || !plan) return;
+      const task = plan.tasks.find((item) => item.id === checkbox.dataset.taskId);
+      if (!task) return;
+      task.done = checkbox.checked;
+      markPersonal(plan);
+      save(); renderSidebar(); renderTasks(plan);
+    });
+    ui.taskList.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-remove-id]');
+      const plan = selected();
+      if (!button || !plan) return;
+      plan.tasks = plan.tasks.filter((task) => task.id !== button.dataset.removeId);
+      markPersonal(plan);
+      save(); renderSidebar(); renderTasks(plan);
+      notify('Step removed.');
+    });
+    document.querySelectorAll('[data-filter]').forEach((button) => button.addEventListener('click', () => {
+      filter = button.dataset.filter;
+      const plan = selected();
+      if (plan) renderTasks(plan);
+    }));
+    ui.deletePlan.addEventListener('click', () => {
+      if (typeof ui.dialog.showModal === 'function') ui.dialog.showModal();
+      else if (window.confirm('Delete this plan and all its steps?')) deleteSelected();
+    });
+    el('cancelDeleteBtn').addEventListener('click', () => ui.dialog.close());
+    el('confirmDeleteBtn').addEventListener('click', () => { ui.dialog.close(); deleteSelected(); });
+    function deleteSelected() {
+      state.plans = state.plans.filter((p) => p.id !== state.activeId);
+      state.activeId = state.plans[0]?.id || null;
+      filter = 'all';
+      save(); render(); notify('Plan deleted.');
+    }
+    el('exportBtn').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `your-planboard-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      notify('Backup downloaded. Keep it somewhere safe.');
+    });
+    el('importBtn').addEventListener('click', () => ui.importFile.click());
+    ui.importFile.addEventListener('change', async () => {
+      const file = ui.importFile.files?.[0];
+      if (!file) return;
+      try {
+        if (file.size > 2 * 1024 * 1024) throw Error('Please choose a backup smaller than 2 MB.');
+        const parsed = JSON.parse(await file.text());
+        if (parsed.version !== 1 || !Array.isArray(parsed.plans)) throw Error('Please choose a Your Planboard JSON backup.');
+        if (!parsed.plans.length) throw Error('This backup has no plans to import.');
+        if (parsed.plans.length + state.plans.length > MAX_PLANS) throw Error('This starter can hold up to 30 plans. Export and remove some plans first.');
+        const incoming = parsed.plans.map(cleanPlan).map((p) => ({
+          ...p, id: uid(), isSample: false,
+          tasks: p.tasks.map((t) => ({ ...t, id: uid() }))
+        }));
+        state.plans.unshift(...incoming);
+        state.activeId = incoming[0].id;
+        filter = 'all';
+        save(); render();
+        notify(`Imported ${incoming.length} ${incoming.length === 1 ? 'plan' : 'plans'}. Your existing plans were kept.`);
+      } catch (error) {
+        notify(error instanceof Error ? error.message : 'Could not import this backup.');
+      } finally {
+        ui.importFile.value = '';
+      }
+    });
+    window.addEventListener('storage', (event) => {
+      if (event.key === KEY) { storageWorks = true; state = load(); render(); notify('Plans updated from another tab.'); }
+    });
+    setSaveStatus(storageWorks);
+    render();
+  })();
+  </script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a413df1e7ce37083',t:'MTc5MDQ0MjUxNg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
